@@ -140,7 +140,7 @@ CC_WARNINGS := \
   -Wno-unused-parameter
 
 COMMON_FLAGS := \
-  -Werror \
+  #-Werror \
   -fno-unwind-tables \
   -ffunction-sections \
   -fdata-sections \
@@ -246,6 +246,7 @@ GENERATED_SRCS_DIR := $(GENDIR)genfiles/
 BINDIR := $(GENDIR)bin/
 LIBDIR := $(GENDIR)lib/
 PRJDIR := $(GENDIR)prj/
+ELFDIR := $(GENDIR)elf/ # CUSTOM
 
 # These two must be defined before we include the target specific Makefile.inc
 # because we filter out the examples that are not supported for those targets.
@@ -717,9 +718,14 @@ ifeq ($(TOOLCHAIN), armclang)
 		$(FROMELF) --bin --output=$@ $<
 else
   OBJCOPY := ${TARGET_TOOLCHAIN_ROOT}$(TARGET_TOOLCHAIN_PREFIX)objcopy
+  OBJDUMP := ${TARGET_TOOLCHAIN_ROOT}$(TARGET_TOOLCHAIN_PREFIX)objdump
   $(BINDIR)%.bin: $(BINDIR)%
 		@mkdir -p $(dir $@)
 		$(OBJCOPY) $< $@ -O binary
+  $(ELFDIR)%.elf: $(ELFDIR)%
+		@mkdir -p $(dir $@)
+		$(OBJDUMP) $< $@ -D dump
+
 endif
 
 # Create kernel test targets.
