@@ -16,6 +16,7 @@ limitations under the License.
 #include "tensorflow/lite/micro/examples/hello_world/main_functions.h"
 
 #include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/micro/examples/hello_world/constants.h"
 #include "tensorflow/lite/micro/examples/hello_world/hello_world_model_data.h"
 #include "tensorflow/lite/micro/examples/hello_world/output_handler.h"
@@ -23,6 +24,9 @@ limitations under the License.
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/system_setup.h"
 #include "tensorflow/lite/schema/schema_generated.h"
+
+#include "tensorflow/lite/micro/tools/make/dvexriscv/include/FpgaConfig.h"
+// #include "tensorflow/lite/micro/tools/make/dvexriscv/include/FpgaConfig.c"
 
 // Globals, used for compatibility with Arduino-style sketches.
 namespace {
@@ -37,9 +41,45 @@ constexpr int kTensorArenaSize = 2000;
 uint8_t tensor_arena[kTensorArenaSize];
 }  // namespace
 
+// https://stackoverflow.com/questions/26991369/writing-data-to-specific-address-during-compile-time
+
+// int gpio(void) __attribute__((section(".gpio_func")));
+// int gpio(void) {
+//   return 0xdeadbeef;
+// }
+// Pio* gpio_p __attribute__((section(".gpio"))) = new (reinterpret_cast<void*>( 0x00010100 )) Pio;
+static Pio gpio __attribute__((section(".gpio"))) = {
+  0, // port
+  0xffffffff, // direction
+  0, // reserved
+  0, // reserved
+  0, // outset
+  0, // outclear
+};
+Pio* gpio_p = &gpio;
+
+volatile static uint32_t test __attribute__((section(".gpio"))) = 24;
+volatile uint32_t* test_p = &test;
+
+Pio* g_Pio = (Pio*)(MEMADDR_PIO);
+Pio* g_Pio2;
+
+
+void write_to_port(uint32_t x) {
+	g_Pio->port = x;
+}
+
 // The name of this function is important for Arduino compatibility.
 void setup() {
   tflite::InitializeTarget();
+
+  Pio* g_Pio2 = reinterpret_cast<Pio*>( 0x00010100 );
+
+  Pio* g_PioAlloc_p = reinterpret_cast<Pio*>( 0x00010100 );
+  Pio* g_PioAlloc = new ((void*)g_PioAlloc_p) Pio;
+
+  gpio_p->port = 0xaf;
+
 
   // Set up logging. Google style is to avoid globals or statics because of
   // lifetime uncertainty, but since this has a trivial destructor it's okay.
@@ -60,7 +100,21 @@ void setup() {
 
   // This pulls in all the operation implementations we need.
   // NOLINTNEXTLINE(runtime-global-variables)
-  static tflite::AllOpsResolver resolver;
+  // static tflite::AllOpsResolver resolver;
+
+  // Manually pull in operation implementations to reduce required memory!
+  // (estimate functions from ./images/model_architecture.png)
+  // NOLINTNEXTLINE(runtime-global-variables)
+  static tflite::MicroMutableOpResolver<3> resolver;
+  if (resolver.AddFullyConnected() != kTfLiteOk) {
+    return;
+  }
+  if (resolver.AddRelu() != kTfLiteOk) {
+    return;
+  }
+   if (resolver.AddReshape() != kTfLiteOk) {
+    return;
+  }
 
   // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
@@ -118,4 +172,6 @@ void loop() {
   // the total number per cycle
   inference_count += 1;
   if (inference_count >= kInferencesPerCycle) inference_count = 0;
+
+  write_to_port((uint32_t)inference_count);
 }
