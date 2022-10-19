@@ -47,18 +47,19 @@ uint8_t tensor_arena[kTensorArenaSize];
 //   return 0xdeadbeef;
 // }
 // Pio* gpio_p __attribute__((section(".gpio"))) = new (reinterpret_cast<void*>( 0x00010100 )) Pio;
-static Pio gpio __attribute__((section(".gpio"))) = {
-  0, // port
-  0xffffffff, // direction
-  0, // reserved
-  0, // reserved
-  0, // outset
-  0, // outclear
-};
-Pio* gpio_p = &gpio;
 
-volatile static uint32_t test __attribute__((section(".gpio"))) = 24;
-volatile uint32_t* test_p = &test;
+// static Pio gpio __attribute__((section(".gpio"))) = {
+//   0, // port
+//   0xffffffff, // direction
+//   0, // reserved
+//   0, // reserved
+//   0, // outset
+//   0, // outclear
+// };
+// Pio* gpio_p = &gpio;
+
+// volatile static uint32_t test __attribute__((section(".gpio"))) = 24;
+// volatile uint32_t* test_p = &test;
 
 Pio* g_Pio = (Pio*)(MEMADDR_PIO);
 Pio* g_Pio2;
@@ -77,7 +78,7 @@ void setup() {
   Pio* g_PioAlloc_p = reinterpret_cast<Pio*>( 0x00010100 );
   Pio* g_PioAlloc = new ((void*)g_PioAlloc_p) Pio;
 
-  gpio_p->port = 0xaf;
+  // gpio_p->port = 0xaf;
 
 
   // Map the model into a usable data structure. This doesn't involve any

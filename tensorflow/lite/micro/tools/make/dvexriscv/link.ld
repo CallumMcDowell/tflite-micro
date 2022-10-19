@@ -18,11 +18,13 @@ _sp = ALIGN(_end_of_memory - 0x10, 4);
 
 SECTIONS
 {
+	/*
 	_gpiostart. = 0x00010100; // reserve section for gpio object
 	.gpio : AT (_gpiostart)
 	{
 		*(.gpio)
 	} > OCRAM
+	*/
 
 	.init :
 	{
